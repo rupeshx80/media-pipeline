@@ -2,28 +2,26 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
+import dotenv from 'dotenv';
+dotenv.config();
 
-// import { sessionMiddleware } from "./config/session";
-// import { contextMiddleware } from "./middlewares/context";
 
-// import uploadRouter from "./routes/upload.route"
+
+import uploadRouter from "./api-gateway/routes/upload.route"
 
 const app = express();
 
 app.use(helmet());
 app.use(compression());
 
-// app.use(sessionMiddleware); 
-// app.use(contextMiddleware);
-
 app.use(cors({
   origin: process.env.CORS_ORIGIN,
   credentials: true,
 }));
 
-app.use(express.json({ limit: "50mb" }));
+app.use(express.json({ limit: "100mb" }));
 
 
-// app.use("/api/v3/s3uploader", uploadRouter);
+app.use("/api", uploadRouter);
 
 export default app;

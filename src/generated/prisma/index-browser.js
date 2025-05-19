@@ -120,9 +120,38 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.FileScalarFieldEnum = {
+  id: 'id',
+  key: 'key',
+  url: 'url',
+  fileType: 'fileType',
+  originalName: 'originalName',
+  size: 'size',
+  duration: 'duration',
+  width: 'width',
+  height: 'height',
+  contentType: 'contentType',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
+exports.Prisma.NullsOrder = {
+  first: 'first',
+  last: 'last'
+};
+
 
 exports.Prisma.ModelName = {
-
+  File: 'File'
 };
 
 /**

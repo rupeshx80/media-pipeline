@@ -1,4 +1,4 @@
-// server.ts
+
 import express from "express";
 import app from "./app";
 import prisma from "./config/db";
