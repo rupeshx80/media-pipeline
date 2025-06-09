@@ -6,7 +6,7 @@ import { readFile, unlink } from "fs/promises";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
 import logger from "../../utils";
-
+import { mediaQueue } from "../../queues/media-queue";
 
 
 interface UploadTypes {
@@ -29,11 +29,11 @@ const VALID_MIME_TYPES = new Set([
 
   'video/mp4',
   'video/webm',
-  'video/quicktime', // .mov
-  'video/x-msvideo', // .avi
+  'video/quicktime',
+  'video/x-msvideo',
   'video/x-matroska',
 
-  'audio/mpeg', // .mp3
+  'audio/mpeg',
   'audio/wav',
   'audio/ogg',
   'audio/webm',
@@ -84,7 +84,7 @@ export async function uploadFiles(
       if (!bucket || !region) return reject(new Error('Missing AWS S3 configuration'));
 
       for (const file of uploadedFiles) {
-        if (!file || !file.mimetype || !VALID_MIME_TYPES.has(file.mimetype)) continue;
+        if (!file?.mimetype || !VALID_MIME_TYPES.has(file.mimetype)) continue;
 
         const sizeLimit = getFileSizeLimit(file.mimetype);
         if (file.size > sizeLimit) {
@@ -164,6 +164,17 @@ export async function uploadFiles(
           };
 
           const record = await prisma.file.create({ data: fileData });
+
+          const mediaqueue = await mediaQueue.add("process-media", {
+            fileId: record.id,
+            key: record.key,
+            url: record.url,
+            fileType: mediaMetadata.fileType, 
+            originalName: record.originalName,
+            size: record.size,
+          });
+
+          logger.info(mediaqueue)
 
           results.push(record as UploadTypes);
 
