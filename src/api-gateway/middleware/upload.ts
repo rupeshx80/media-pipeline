@@ -6,8 +6,7 @@ import { readFile, unlink } from "fs/promises";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
 import logger from "../../utils";
-import { mediaQueue } from "../../queues/media-queue";
-
+import { transcodeQueue } from "../../libs/bullmq-client"; 
 
 interface UploadTypes {
   key: string;
@@ -21,27 +20,10 @@ interface UploadTypes {
 }
 
 const VALID_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-  'video/x-msvideo',
-  'video/x-matroska',
-
-  'audio/mpeg',
-  'audio/wav',
-  'audio/ogg',
-  'audio/webm',
-  'audio/aac',
-
-  'application/pdf',
-  'text/plain',
-  'application/msword',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska',
+  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac',
+  'application/pdf', 'text/plain', 'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 
@@ -52,11 +34,7 @@ function getFileSizeLimit(mimeType: string): number {
   return 50 * 1024 * 1024;
 }
 
-export async function uploadFiles(
-  req: IncomingMessage
-): Promise<UploadTypes[]> {
-
-
+export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> {
   const form = formidable({
     maxFileSize: 500 * 1024 * 1024,
     multiples: true,
@@ -109,45 +87,20 @@ export async function uploadFiles(
           const key = `uploads/${folder}/${uuid()}-${sanitizedFilename}`;
           logger.info({ key, mimetype: file.mimetype }, "Processing upload");
 
-          let mediaMetadata: Record<string, any> = {};
-          if (file.mimetype.startsWith('video/')) {
-            mediaMetadata = { contentType: 'video', duration: null, width: null, height: null };
-          } else if (file.mimetype.startsWith('audio/')) {
-            mediaMetadata = { contentType: 'audio', duration: null };
-          } else if (file.mimetype.startsWith('image/')) {
-            mediaMetadata = { contentType: 'image', width: null, height: null };
-          }
+          const mediaMetadata: Record<string, any> = {};
 
+          const command = new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: file.mimetype,
+            ContentDisposition: `attachment; filename="${sanitizedFilename}"`,
+            Metadata: {
+              originalName: sanitizedFilename
+            }
+          });
 
-          try {
-            const command = new PutObjectCommand({
-              Bucket: bucket,
-              Key: key,
-              Body: buffer,
-              ContentType: file.mimetype,
-              ContentDisposition: `attachment; filename="${sanitizedFilename}"`,
-              Metadata: {
-                originalName: sanitizedFilename,
-                ...Object.entries(mediaMetadata).reduce((acc, [k, v]) => {
-                  if (v !== null) acc[k] = String(v);
-                  return acc;
-                }, {} as Record<string, string>)
-              }
-            })
-
-            await s3.send(command)
-          } catch (error) {
-            logger.error({
-              msg: 'S3 upload failed',
-              file: file.originalFilename,
-              name: (error as any)?.name,
-              message: (error as any)?.message,
-              stack: (error as any)?.stack,
-              fullError: error
-            });
-
-          }
-
+          await s3.send(command);
 
           const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 
@@ -157,27 +110,24 @@ export async function uploadFiles(
             fileType: file.mimetype,
             originalName: file.originalFilename || 'unnamed',
             size: file.size,
-            duration: mediaMetadata.duration ?? null,
-            width: mediaMetadata.width ?? null,
-            height: mediaMetadata.height ?? null,
-            ...mediaMetadata
+            duration: null,
+            width: null,
+            height: null
           };
 
           const record = await prisma.file.create({ data: fileData });
 
-          const mediaqueue = await mediaQueue.add("process-media", {
-            fileId: record.id,
-            key: record.key,
-            url: record.url,
-            fileType: mediaMetadata.fileType, 
-            originalName: record.originalName,
-            size: record.size,
-          });
+          if (file.mimetype.startsWith('video/')) {
+            await transcodeQueue.add("transcode-job", {
+              fileId: record.id,
+              key: record.key,
+              url: record.url
+            });
 
-          logger.info(mediaqueue)
+            logger.info({ fileId: record.id }, 'Transcode job added to queue');
+          }
 
           results.push(record as UploadTypes);
-
         } catch (error) {
           logger.error({ error, file: file.originalFilename }, 'Error processing file');
         } finally {
