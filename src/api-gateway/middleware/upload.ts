@@ -13,10 +13,11 @@ interface UploadTypes {
   url: string;
   fileType: string;
   originalName: string;
+  mimetype: string;
   size: number;
-  duration?: number;
-  width?: number;
-  height?: number;
+  duration?: number | null; 
+  width?: number | null;
+  height?: number | null ;
 }
 
 const VALID_MIME_TYPES = new Set([
@@ -132,7 +133,12 @@ export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> 
             logger.info({ fileId: record.id }, 'Transcode job added to queue');
           }
 
-          results.push(record as UploadTypes);
+          results.push({
+            ...record,
+            fileType: file.mimetype, 
+            mimetype: file.mimetype, 
+          });
+
         } catch (error) {
           logger.error({ error, file: file.originalFilename }, 'Error processing file');
         } finally {
