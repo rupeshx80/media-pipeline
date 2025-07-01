@@ -6,7 +6,7 @@ import { readFile, unlink } from "fs/promises";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
 import logger from "../../utils";
-import { transcodeQueue } from "../../libs/bullmq-client"; 
+import { transcodeQueue } from "../../libs/bullmq-client";
 
 interface UploadTypes {
   key: string;
@@ -103,6 +103,11 @@ export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> 
           await s3.send(command);
 
           const url = `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+
+          if (!(prisma as any)._isConnected) {
+            await prisma.$connect();
+          }
+
 
           const fileData = {
             key,

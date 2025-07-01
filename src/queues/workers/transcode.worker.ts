@@ -5,11 +5,13 @@ import path from 'path';
 import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import os from 'os';
 
 import { connection } from '../../lib/redis';
 import { s3 } from '../../api-gateway/utils/storage';
 import logger from '../../utils';
+import { Request, Response } from 'express';
 
 const execAsync = promisify(exec);
 
@@ -21,7 +23,7 @@ const OUTPUT_FORMATS = [
 interface TranscodeJobData {
     fileId: string;
     url: string;
-    key: string; 
+    key: string;
 }
 
 export const transcodeWorker = new Worker(
@@ -33,12 +35,13 @@ export const transcodeWorker = new Worker(
         logger.info({ jobId: job.id, fileId, url }, 'Starting transcode job');
 
         const originalFilename = path.basename(url);
-        const localInputPath = `/tmp/${originalFilename}`;
-        const outputDir = `/tmp/${fileId}`;
+        const tempDir = os.tmpdir(); // auto-detect safe path
+        const localInputPath = path.join(tempDir, originalFilename);
+        const outputDir = path.join(tempDir, fileId);
         const outputFiles: string[] = [];
 
         try {
-            
+
             logger.info(`Downloading ${key} from S3...`);
 
             const s3Object = await s3.send(new GetObjectCommand({
@@ -97,7 +100,7 @@ export const transcodeWorker = new Worker(
                 for (const file of outputFiles) {
                     await fs.unlink(file);
                 }
-                await fs.rmdir(outputDir, { recursive: true });
+                await fs.rm(outputDir, { recursive: true, force: true });
                 logger.info(`Cleaned up temp files for job ${job.id}`);
             } catch (cleanupErr) {
                 logger.warn({ cleanupErr, fileId }, 'Cleanup failed');
@@ -109,3 +112,26 @@ export const transcodeWorker = new Worker(
         concurrency: 2,
     }
 );
+
+export const deleteOriginalVideo = async (req: Request, res: Response): Promise<any> => {
+    const { key } = req.body;
+    const bucket = process.env.AWS_S3_BUCKET_NAME!;
+
+    if (!key || typeof key !== 'string') {
+        logger.warn('Missing or invalid `key` in request body');
+        return res.status(400).json({ error: 'Invalid or missing `key` in body' });
+    }
+
+    try {
+        await s3.send(new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: key,
+        }));
+
+        logger.info(`Deleted ${key} from S3`);
+        res.json({ message: `Deleted ${key} from S3` });
+    } catch (err) {
+        logger.error({ err, key }, 'Failed to delete file from S3');
+        res.status(500).json({ error: 'Failed to delete from S3' });
+    }
+};
