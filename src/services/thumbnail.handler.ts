@@ -5,10 +5,13 @@ import logger from '../utils';
 export const handlePostUpload = async (files: any[]) => {
   for (const file of files) {
     const { id: fileId, key, mimetype } = file;
-     if (!mimetype || !key) {
-    logger.warn('Skipping file due to missing key or mimetype:', file);
-    continue;
-  }
+
+    logger.info({ fileId, key }, 'Attempting to add thumbnail job')
+
+    if (!mimetype || !key) {
+      logger.warn('Skipping file due to missing key or mimetype:', file);
+      continue;
+    }
 
     if (mimetype.startsWith('video')) {
       await thumbnailQueue.add('generate-thumbnail', {
@@ -17,6 +20,8 @@ export const handlePostUpload = async (files: any[]) => {
         type: 'video',
       });
     }
+
+    logger.info('Thumbnail job added to queue');
 
     if (mimetype.startsWith('audio')) {
       await thumbnailQueue.add('generate-thumbnail', {
