@@ -6,7 +6,7 @@ import { readFile, unlink } from "fs/promises";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
 import logger from "../../utils";
-import { transcodeQueue } from "../../libs/bullmq-client";
+import { transcodeQueue,previewQueue } from "../../libs/bullmq-client";
 
 interface UploadTypes {
   key: string;
@@ -15,9 +15,9 @@ interface UploadTypes {
   originalName: string;
   mimetype: string;
   size: number;
-  duration?: number | null; 
+  duration?: number | null;
   width?: number | null;
-  height?: number | null ;
+  height?: number | null;
 }
 
 const VALID_MIME_TYPES = new Set([
@@ -124,19 +124,30 @@ export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> 
           const record = await prisma.file.create({ data: fileData });
 
           if (file.mimetype.startsWith('video/')) {
+
+            
             await transcodeQueue.add("transcode-job", {
               fileId: record.id,
               key: record.key,
               url: record.url
             });
-
+            
             logger.info({ fileId: record.id }, 'Transcode job added to queue');
+
+            await previewQueue.add("preview-job", {
+              fileId: record.id,
+              key: record.key,
+              url: record.url,
+              startTime: 3,     // start 3s into the video
+              duration: 5       // preview duration
+            });
+            logger.info({ fileId: record.id }, 'Preview job added to queue');
           }
 
           results.push({
             ...record,
-            fileType: file.mimetype, 
-            mimetype: file.mimetype, 
+            fileType: file.mimetype,
+            mimetype: file.mimetype,
           });
 
         } catch (error) {

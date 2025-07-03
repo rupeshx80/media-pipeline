@@ -25,7 +25,7 @@ interface ThumbnailJobData {
 const processor = async (job: Job<ThumbnailJobData>) => {
     const { fileId, key, type } = job.data;
 
-    logger.info('🔁 Thumbnail worker received job:', job.data);
+    logger.info('Thumbnail worker received job:', job.data);
 
     const bucket = process.env.AWS_S3_BUCKET_NAME!;
     const tempDir = os.tmpdir();

@@ -13,7 +13,7 @@ router.post('/upload', async (req: Request, res: Response) => {
 
     await handlePostUpload(result);
 
-    logger.info({ fileCount: result.length }, 'Upload successful');
+    logger.info({ fileCount: result.length }, 'Thumbnail uploaded successful');
 
     res.status(200).json({ success: true, files: result });
   } catch (error: any) {

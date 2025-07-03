@@ -25,5 +25,6 @@ model File {
   width         Int?
   height        Int?
   contentType  String?
+  previewUrl  String?
   createdAt     DateTime @default(now())
 }
