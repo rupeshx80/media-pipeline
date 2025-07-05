@@ -6,6 +6,9 @@ import express from "express";
 import app from "./app";
 import prisma from "./config/db";
 
+import './queues/workers/transcode.worker';
+import './queues/workers/thumbnail.worker';
+import './queues/workers/preview.worker';
 
 const PORT = process.env.PORT ?? 4000;
 

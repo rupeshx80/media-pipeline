@@ -6,8 +6,7 @@ import compression from "compression";
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { transcodeQueue } from './libs/bullmq-client';
-
+import { transcodeQueue,thumbnailQueue, previewQueue } from './libs/bullmq-client';
 
 import uploadRouter from "./api-gateway/routes/upload.route"
 
@@ -20,7 +19,11 @@ const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
 
 createBullBoard({
-  queues: [new BullMQAdapter(transcodeQueue)],
+  queues: [
+    new BullMQAdapter(transcodeQueue),
+    new BullMQAdapter(thumbnailQueue),   
+    new BullMQAdapter(previewQueue),     
+  ],
   serverAdapter,
 });
 
