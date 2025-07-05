@@ -5,7 +5,7 @@ import prisma from "../../config/db";
 import { readFile, unlink } from "fs/promises";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
-import logger from "../../utils";
+import logger from "../../utils/logger";
 import { transcodeQueue,previewQueue } from "../../libs/bullmq-client";
 
 interface UploadTypes {
@@ -36,6 +36,7 @@ function getFileSizeLimit(mimeType: string): number {
 }
 
 export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> {
+  
   const form = formidable({
     maxFileSize: 500 * 1024 * 1024,
     multiples: true,

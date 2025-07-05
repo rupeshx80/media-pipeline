@@ -1,6 +1,6 @@
 import { thumbnailQueue } from '../libs/bullmq-client';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '../utils';
+import logger from '../utils/logger';
 
 export const handlePostUpload = async (files: any[]) => {
   for (const file of files) {

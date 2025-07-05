@@ -3,7 +3,7 @@ import { uploadFiles } from '../middleware/upload';
 import { IncomingMessage } from 'http';
 import { deleteOriginalVideo } from '../../queues/workers/transcode.worker';
 import { handlePostUpload } from '../../services/thumbnail.handler';
-import logger from '../../utils';
+import logger from '../../utils/logger';
 
 const router = express.Router();
 

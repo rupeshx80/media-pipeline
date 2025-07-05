@@ -1,7 +1,11 @@
+import dotenv from 'dotenv';
+import path from 'path';
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import express from "express";
 import app from "./app";
 import prisma from "./config/db";
+
 
 const PORT = process.env.PORT ?? 4000;
 

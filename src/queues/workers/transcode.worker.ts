@@ -7,17 +7,16 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import os from 'os';
-
 import { connection } from '../../lib/redis';
 import { s3 } from '../../api-gateway/utils/storage';
-import logger from '../../utils';
+import logger from '../../utils/logger';
 import { Request, Response } from 'express';
 
 const execAsync = promisify(exec);
 
 const OUTPUT_FORMATS = [
-    { suffix: '720p.mp4', size: '1280x720' },
-    { suffix: '480p.mp4', size: '854x480' }
+  { suffix: '720p.mp4', size: '1280x720' },
+  { suffix: '480p.mp4', size: '854x480' }
 ];
 
 interface TranscodeJobData {
@@ -35,7 +34,7 @@ export const transcodeWorker = new Worker(
         logger.info({ jobId: job.id, fileId, url }, 'Starting transcode job');
 
         const originalFilename = path.basename(url);
-        const tempDir = os.tmpdir(); // auto-detect safe path
+        const tempDir = os.tmpdir();
         const localInputPath = path.join(tempDir, originalFilename);
         const outputDir = path.join(tempDir, fileId);
         const outputFiles: string[] = [];

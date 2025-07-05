@@ -9,7 +9,7 @@ import fs from 'fs/promises';
 import os from 'os';
 import prisma from "../../config/db";
 import {connection } from '../../lib/redis';
-import logger from '../../utils';
+import logger from '../../utils/logger';
 
 
 const execAsync = promisify(exec);

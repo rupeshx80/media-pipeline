@@ -8,7 +8,7 @@ import { s3 } from '../../api-gateway/utils/storage';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
-import logger from '../../utils';
+import logger from '../../utils/logger';
 import { connection } from '../../lib/redis';
 import { pipeline } from 'stream/promises';
 
@@ -54,7 +54,6 @@ const processor = async (job: Job<ThumbnailJobData>) => {
 
             const s3Url = `https://${bucket}.s3.amazonaws.com/${thumbnailKey}`;
             logger.info(`Thumbnail uploaded FINALLY : ${s3Url}`);
-            // console.log("THUMBNAIL UPLOADED BENCHOD")
 
         } else if (type === 'audio') {
             const waveformPath = localPath.replace(/\.\w+$/, '_waveform.png');
