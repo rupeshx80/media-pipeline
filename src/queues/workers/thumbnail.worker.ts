@@ -12,8 +12,6 @@ import logger from '../../utils/logger';
 import { connection } from '../../lib/redis';
 import { pipeline } from 'stream/promises';
 
-
-
 const execAsync = promisify(exec);
 
 interface ThumbnailJobData {
@@ -28,8 +26,11 @@ const processor = async (job: Job<ThumbnailJobData>) => {
     logger.info('Thumbnail worker received job:', job.data);
 
     const bucket = process.env.AWS_S3_BUCKET_NAME!;
-    const tempDir = os.tmpdir();
-    const localPath = path.join(tempDir, path.basename(key));
+
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'thumb-'));
+    const filename = path.basename(key);
+    const localPath = path.join(tmpDir, filename);
+
 
     try {
         const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
@@ -37,14 +38,17 @@ const processor = async (job: Job<ThumbnailJobData>) => {
 
 
         if (type === 'video') {
-            const thumbnailPath = localPath.replace(/\.\w+$/, '_thumb.jpg');
+
+
+            const thumbnailPath = path.join(tmpDir, 'thumb.jpg');
+
             const command = `ffmpeg -ss 10 -i "${localPath}" -frames:v 1 -q:v 2 "${thumbnailPath}"`;
             await execAsync(command);
 
             const buffer = await fs.readFile(thumbnailPath);
             const thumbnailKey = `thumbnails/${fileId}/thumb.jpg`;
 
-            
+
             await s3.send(new PutObjectCommand({
                 Bucket: bucket,
                 Key: thumbnailKey,
@@ -53,10 +57,12 @@ const processor = async (job: Job<ThumbnailJobData>) => {
             }));
 
             const s3Url = `https://${bucket}.s3.amazonaws.com/${thumbnailKey}`;
-            logger.info(`Thumbnail uploaded FINALLY : ${s3Url}`);
+            logger.info(`Thumbnail uploaded : ${s3Url}`);
+
 
         } else if (type === 'audio') {
-            const waveformPath = localPath.replace(/\.\w+$/, '_waveform.png');
+            
+            const waveformPath = path.join(tmpDir, 'waveform.png');
             const command = `ffmpeg -i "${localPath}" -filter_complex "aformat=channel_layouts=mono,showwavespic=s=640x120" -frames:v 1 "${waveformPath}"`;
             await execAsync(command);
 
@@ -69,9 +75,11 @@ const processor = async (job: Job<ThumbnailJobData>) => {
                 Body: buffer,
                 ContentType: 'image/png',
             }));
+            
+            const s3Url = `https://${bucket}.s3.amazonaws.com/${waveformKey}`;
+            logger.info(`Waveform uploaded : ${s3Url}`);
+
         }
-
-
 
         return { status: 'done', fileId };
 
@@ -79,11 +87,8 @@ const processor = async (job: Job<ThumbnailJobData>) => {
         logger.error({ err }, 'Thumbnail job failed');
         throw err;
     } finally {
-        await Promise.all([
-            fs.rm(localPath, { force: true }),
-            fs.rm(localPath.replace(/\.\w+$/, '_thumb.jpg'), { force: true }),
-            fs.rm(localPath.replace(/\.\w+$/, '_waveform.png'), { force: true }),
-        ]);
+        await fs.rm(tmpDir, { recursive: true, force: true });
+
     }
 }
 
@@ -105,15 +110,15 @@ export const thumbnailWorker = new Worker<ThumbnailJobData>(
 );
 
 thumbnailWorker.on('completed', (job) => {
-  logger.info(`Thumbnail job completed: ${job.id}`);
+    logger.info(`Thumbnail job completed: ${job.id}`);
 });
 
 thumbnailWorker.on('failed', (job, err) => {
-  const jobId = job ? job.id : 'unknown';
-  logger.error({ err }, `Thumbnail job failed: ${jobId}`);
+    const jobId = job ? job.id : 'unknown';
+    logger.error({ err }, `Thumbnail job failed: ${jobId}`);
 });
 
 thumbnailWorker.on('error', (err) => {
-  logger.error({ err }, 'Worker error');
+    logger.error({ err }, 'Worker error');
 });
 
