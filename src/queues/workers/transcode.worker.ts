@@ -11,12 +11,14 @@ import { connection } from '../../lib/redis';
 import { s3 } from '../../api-gateway/utils/storage';
 import logger from '../../utils/logger';
 import { Request, Response } from 'express';
+import { getCachedFilePath } from '../../utils/cache';
+
 
 const execAsync = promisify(exec);
 
 const OUTPUT_FORMATS = [
-  { suffix: '720p.mp4', size: '1280x720' },
-  { suffix: '480p.mp4', size: '854x480' }
+    { suffix: '720p.mp4', size: '1280x720' },
+    { suffix: '480p.mp4', size: '854x480' }
 ];
 
 interface TranscodeJobData {
@@ -33,38 +35,27 @@ export const transcodeWorker = new Worker(
 
         logger.info({ jobId: job.id, fileId, url }, 'Starting transcode job');
 
-        const originalFilename = path.basename(url);
+        // const originalFilename = path.basename(url);
         const tempDir = os.tmpdir();
-        const localInputPath = path.join(tempDir, originalFilename);
         const outputDir = path.join(tempDir, fileId);
         const outputFiles: string[] = [];
 
+        let inputPath: string | undefined;
         try {
 
             logger.info(`Downloading ${key} from S3...`);
 
-            const s3Object = await s3.send(new GetObjectCommand({
-                Bucket: bucket,
-                Key: key,
-            }));
+            inputPath = await getCachedFilePath(key);
 
-            if (!s3Object.Body || typeof (s3Object.Body as any).pipe !== 'function') {
-                throw new Error('Failed to get readable stream from S3 object');
-            }
-
-            await pipeline(
-                s3Object.Body as any,
-                createWriteStream(localInputPath)
-            );
-
-            logger.info(`Downloaded to ${localInputPath}`);
+            logger.info(`Downloaded to ${inputPath}`);
 
             await fs.mkdir(outputDir, { recursive: true });
 
             for (const format of OUTPUT_FORMATS) {
-                const outputPath = path.join(outputDir, `${fileId}-${format.suffix}`);
+                const outputFilename = `${fileId}-${format.suffix}`;
+                const outputPath = path.join(outputDir, outputFilename);
 
-                const command = `ffmpeg -i "${localInputPath}" -vf scale=${format.size} -c:v libx264 -preset fast -crf 28 -c:a aac "${outputPath}"`;
+                const command = `ffmpeg -y -i "${inputPath}" -vf scale=${format.size} -c:v libx264 -preset ultrafast -crf 28 -c:a aac "${outputPath}"`;
 
                 logger.info({ command }, 'Running FFmpeg');
                 await execAsync(command);
@@ -95,7 +86,9 @@ export const transcodeWorker = new Worker(
             throw err;
         } finally {
             try {
-                await fs.unlink(localInputPath);
+                if (inputPath) {
+                    await fs.unlink(inputPath);
+                }
                 for (const file of outputFiles) {
                     await fs.unlink(file);
                 }

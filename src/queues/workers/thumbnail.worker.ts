@@ -11,6 +11,7 @@ import os from 'os';
 import logger from '../../utils/logger';
 import { connection } from '../../lib/redis';
 import { pipeline } from 'stream/promises';
+import { getCachedFilePath } from '../../utils/cache';
 
 const execAsync = promisify(exec);
 
@@ -23,26 +24,23 @@ interface ThumbnailJobData {
 const processor = async (job: Job<ThumbnailJobData>) => {
     const { fileId, key, type } = job.data;
 
-    logger.info('Thumbnail worker received job:', job.data);
+    logger.info({ fileId, key, type }, 'Thumbnail worker received job');
 
     const bucket = process.env.AWS_S3_BUCKET_NAME!;
 
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'thumb-'));
-    const filename = path.basename(key);
-    const localPath = path.join(tmpDir, filename);
 
 
     try {
-        const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-        await pipeline(object.Body as NodeJS.ReadableStream, createWriteStream(localPath));
-
+        const localPath = await getCachedFilePath(key);
 
         if (type === 'video') {
 
 
             const thumbnailPath = path.join(tmpDir, 'thumb.jpg');
 
-            const command = `ffmpeg -ss 10 -i "${localPath}" -frames:v 1 -q:v 2 "${thumbnailPath}"`;
+           const command = `ffmpeg -analyzeduration 100M -probesize 100M -i "${localPath}" -ss 00:00:01.000 -t 00:00:01.000 -vf "fps=1,scale=320:-1,format=yuv420p" -q:v 2 -y "${thumbnailPath}"`;
+           
             await execAsync(command);
 
             const buffer = await fs.readFile(thumbnailPath);
@@ -56,8 +54,8 @@ const processor = async (job: Job<ThumbnailJobData>) => {
                 ContentType: 'image/jpeg',
             }));
 
-            const s3Url = `https://${bucket}.s3.amazonaws.com/${thumbnailKey}`;
-            logger.info(`Thumbnail uploaded : ${s3Url}`);
+            logger.info({ s3Key: thumbnailKey }, 'Thumbnail uploaded to S3');
+
 
 
         } else if (type === 'audio') {
