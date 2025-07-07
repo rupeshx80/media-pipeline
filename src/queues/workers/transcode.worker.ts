@@ -25,6 +25,7 @@ interface TranscodeJobData {
     fileId: string;
     url: string;
     key: string;
+    originalName: string;
 }
 
 export const transcodeWorker = new Worker(
@@ -68,7 +69,10 @@ export const transcodeWorker = new Worker(
             for (const filePath of outputFiles) {
                 const buffer = await fs.readFile(filePath);
                 const filename = path.basename(filePath);
-                const transcodedKey = `transcoded/${fileId}/${filename}`;
+                const originalName = job.data.originalName || 'unnamed';
+                const sanitizedOriginalName = originalName.replace(/\s+/g, '-');
+                const transcodedKey = `transcoded/${fileId}-${sanitizedOriginalName}/${filename}`;
+
 
                 await s3.send(new PutObjectCommand({
                     Bucket: bucket,

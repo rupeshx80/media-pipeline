@@ -130,7 +130,8 @@ export async function uploadFiles(req: IncomingMessage): Promise<UploadTypes[]> 
             await transcodeQueue.add("transcode-job", {
               fileId: record.id,
               key: record.key,
-              url: record.url
+              url: record.url,
+              originalName: record.originalName
             });
             
             logger.info({ fileId: record.id }, 'Transcode job added to queue');
