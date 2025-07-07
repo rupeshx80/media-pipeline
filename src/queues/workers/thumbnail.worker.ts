@@ -39,7 +39,7 @@ const processor = async (job: Job<ThumbnailJobData>) => {
 
             const thumbnailPath = path.join(tmpDir, 'thumb.jpg');
 
-           const command = `ffmpeg -analyzeduration 100M -probesize 100M -i "${localPath}" -ss 00:00:01.000 -t 00:00:01.000 -vf "fps=1,scale=320:-1,format=yuv420p" -q:v 2 -y "${thumbnailPath}"`;
+           const command = `ffmpeg -ss 00:00:01.000 -i "${localPath}" -vframes 1 -vf "scale=320:-1" -q:v 2 -y "${thumbnailPath}"`;
            
             await execAsync(command);
 

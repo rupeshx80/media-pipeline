@@ -18,7 +18,7 @@ const execAsync = promisify(exec);
 export const previewWorker = new Worker('preview', async (job: Job) => {
   const { fileId, key, url, startTime, duration } = job.data;
 
-  logger.info({ fileId, key }, '🎬 Preview job started');
+  logger.info({ fileId, key }, 'Preview job started');
 
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'preview-'));
   const outputPath = path.join(tmpDir, 'preview.mp4');
@@ -27,7 +27,7 @@ export const previewWorker = new Worker('preview', async (job: Job) => {
 
     const inputPath = await getCachedFilePath(key);
 
-    await execAsync(`ffmpeg -ss ${startTime} -t ${duration} -i "${inputPath}" -c:v libx264 -c:a aac "${outputPath}"`);
+    await execAsync(`ffmpeg -ss ${startTime} -i "${inputPath}" -t ${duration} -c:v libx264 -preset ultrafast -tune zerolatency -crf 28 -threads 0 -c:a aac -movflags +faststart "${outputPath}"`);
 
     const previewKey = `previews/${uuid()}-preview.mp4`;
 
