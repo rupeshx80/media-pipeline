@@ -6,7 +6,7 @@ import compression from "compression";
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { transcodeQueue,thumbnailQueue, previewQueue } from './libs/bullmq-client';
+import { transcodeQueue,thumbnailQueue, previewQueue } from './lib/bullmq-client';
 
 import uploadRouter from "./api-gateway/routes/upload.route"
 

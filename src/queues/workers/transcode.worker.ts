@@ -3,9 +3,7 @@
     import { promisify } from 'util';
     import path from 'path';
     import fs from 'fs/promises';
-    import { createWriteStream } from 'fs';
-    import { pipeline } from 'stream/promises';
-    import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+    import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
     import os from 'os';
     import { connection } from '../../lib/redis';
     import { s3 } from '../../api-gateway/utils/storage';
@@ -115,7 +113,7 @@
         },
         {
             connection,
-            concurrency: 2, 
+            concurrency: 1, 
         }
     );
 

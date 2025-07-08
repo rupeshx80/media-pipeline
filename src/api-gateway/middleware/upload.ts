@@ -7,7 +7,7 @@ import { createReadStream as createReadStreamSync } from "fs";
 import { v4 as uuid } from "uuid";
 import { IncomingMessage } from "http";
 import logger from "../../utils/logger";
-import { transcodeQueue, previewQueue } from "../../libs/bullmq-client";
+import { transcodeQueue, previewQueue } from "../../lib/bullmq-client";
 
 interface UploadTypes {
   key: string;
@@ -36,7 +36,6 @@ function getFileSizeLimit(mimeType: string): number {
   return 50 * 1024 * 1024;
 }
 
-// OPTIMIZATION: Process single file upload
 async function processFileUpload(file: formidable.File, bucket: string, region: string): Promise<UploadTypes | null> {
   if (!file?.mimetype || !VALID_MIME_TYPES.has(file.mimetype)) {
     logger.warn({ mimetype: file.mimetype }, "File rejected: invalid MIME type");

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { Worker, Job } from 'bullmq';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { s3 } from '../../api-gateway/utils/storage';
 import path from 'path';
 import fs from 'fs/promises';
@@ -16,7 +16,7 @@ import { getCachedFilePath } from '../../utils/cache';
 const execAsync = promisify(exec);
 
 export const previewWorker = new Worker('preview', async (job: Job) => {
-  const { fileId, key, url, startTime, duration } = job.data;
+  const { fileId, key, startTime, duration } = job.data;
 
   logger.info({ fileId, key }, 'Preview job started');
 
@@ -39,6 +39,10 @@ export const previewWorker = new Worker('preview', async (job: Job) => {
       Body: previewBuffer,
       ContentType: 'video/mp4',
     }));
+
+     if (!(prisma as any)._isConnected) {
+      await prisma.$connect();
+    }
 
     await prisma.file.update({
       where: { id: fileId },

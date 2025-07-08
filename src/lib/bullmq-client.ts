@@ -1,5 +1,5 @@
 import { Queue } from 'bullmq';
-import { connection } from '../lib/redis';
+import { connection } from './redis';
 
 //all queues setup perfectly
 export const transcodeQueue = new Queue('transcode', { connection });

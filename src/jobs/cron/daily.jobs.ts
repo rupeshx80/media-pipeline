@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { transcodeQueue , thumbnailQueue, previewQueue} from '../../libs/bullmq-client';
+import { transcodeQueue , thumbnailQueue, previewQueue} from '../../lib/bullmq-client';
 import logger from '../../utils/logger';
 import { ListObjectsV2Command,DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { s3 } from '../../api-gateway/utils/storage';
