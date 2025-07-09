@@ -14,7 +14,8 @@ import uploadRouter from "./api-gateway/routes/upload.route"
 const app = express();
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'test.html'));
+  res.sendFile(path.join(__dirname, '..', 'public', 'test.html'));
+
 });
 
 app.use(helmet());
