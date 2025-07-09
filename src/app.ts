@@ -12,6 +12,10 @@ import uploadRouter from "./api-gateway/routes/upload.route"
 
 const app = express();
 
+app.get('/', (req, res) => {
+  res.send('Media Pipeline Backend is Live 🚀');
+});
+
 app.use(helmet());
 app.use(compression());
 
