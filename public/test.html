@@ -85,14 +85,10 @@
             method: "POST",
             body: formData,
           });
-
           const json = await res.json();
 
-          if (json.message) {
-            output.textContent = `${json.message}`;
-          } else {
-            output.textContent = "Uploaded successfully.";
-          }
+          output.textContent =
+            "Uploaded successfully, go to https://media-pipeline.onrender.com/admin/queues to check what's happening";
         } catch (err) {
           output.textContent = "Error: " + err.message;
         }
