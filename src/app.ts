@@ -6,6 +6,7 @@ import compression from "compression";
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
+import path from 'path';
 import { transcodeQueue,thumbnailQueue, previewQueue } from './lib/bullmq-client';
 
 import uploadRouter from "./api-gateway/routes/upload.route"
@@ -13,11 +14,13 @@ import uploadRouter from "./api-gateway/routes/upload.route"
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('Media Pipeline Backend is Live 🚀');
+  res.redirect('/test.html');
 });
+
 
 app.use(helmet());
 app.use(compression());
+app.use(express.static(path.join(__dirname, '../public')));
 
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/admin/queues');
